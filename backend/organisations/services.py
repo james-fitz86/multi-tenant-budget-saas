@@ -24,3 +24,10 @@ def create_organisation(user, organisation_name):
         )
 
     return organisation
+
+def get_user_memberships(user):
+    """
+    Returns all organisation memberships for a given user.
+    """
+
+    return OrganisationMembership.objects.filter(user=user).select_related("organisation")

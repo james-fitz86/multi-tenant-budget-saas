@@ -75,3 +75,36 @@ class OrganisationMembership(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.organisation} ({self.role})"
+
+class Department(models.Model):
+    """
+    Organisation-scoped operational unit.
+
+    Departments exist within an organisation and form the basis
+    for budget allocation and spend governance.
+    """
+
+    organisation = models.ForeignKey(
+        Organisation,
+        on_delete=models.CASCADE,
+        related_name="departments",
+    )
+
+    name = models.CharField(max_length=255)
+
+    manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="managed_departments"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("organisation", "name")
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name

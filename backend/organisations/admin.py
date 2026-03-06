@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Organisation, OrganisationMembership
+from .models import Organisation, OrganisationMembership, Department
 # Register your models here.
 
 @admin.register(Organisation)
@@ -12,3 +12,9 @@ class OrganisationAdmin(admin.ModelAdmin):
 class OrganisationMembershipAdmin(admin.ModelAdmin):
     list_display = ("user", "organisation", "role", "joined_at")
     list_filter = ("role", "organisation")
+
+@admin.register(Department)
+class DepartmentAdmin(admin.ModelAdmin):
+    list_display = ("name", "organisation", "manager", "created_at")
+    list_filter = ("organisation")
+    search_fields = ("name")
