@@ -16,5 +16,5 @@ class OrganisationMembershipAdmin(admin.ModelAdmin):
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
     list_display = ("name", "organisation", "manager", "created_at")
-    list_filter = ("organisation")
-    search_fields = ("name")
+    list_filter = ("organisation",)
+    search_fields = ("name",)
