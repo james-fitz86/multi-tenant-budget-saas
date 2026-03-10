@@ -6,7 +6,7 @@ from config.base_models import TenantScopedModel
 class BudgetPeriod(models.TextChoices):
     """
     Defines the supported budget period types
-    for orgabisation-level budgets.
+    for organisation-level budgets.
     """
     MONTHLY = "MONTHLY", "Monthly"
     QUARTERLY = "QUARTERLY", "Quarterly"
@@ -52,3 +52,52 @@ class OrganisationBudget(TenantScopedModel):
 
     def __str__(self):
         return f"{self.name} ({self.organisation.name})"
+
+class DepartmentBudget(TenantScopedModel):
+
+    organisation_budget = models.ForeignKey(
+        "OrganisationBudget",
+        on_delete=models.CASCADE,
+        related_name="department_budgets"
+    )
+
+    department = models.ForeignKey(
+        "organisations.Department",
+        on_delete=models.CASCADE,
+        related_name="department_budgets"
+    )
+
+    allocated_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    committed_spend = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    actual_spend = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    class Meta:
+        ordering = ["-allocated_amount"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["department", "organisation_budget"],
+                name="unique_department_budget_per_period"
+            )
+        ]
+
+        indexes = [
+            models.Index(fields=["organisation_budget", "department"])
+        ]
+
+    def __str__(self):
+        return f"{self.department.name} - {self.organisation_budget.name}"
