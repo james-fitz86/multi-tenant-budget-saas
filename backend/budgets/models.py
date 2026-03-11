@@ -1,5 +1,6 @@
 from django.db import models
 from config.base_models import TenantScopedModel
+from django.core.exceptions import ValidationError
 
 # Create your models here.
 
@@ -54,7 +55,13 @@ class OrganisationBudget(TenantScopedModel):
         return f"{self.name} ({self.organisation.name})"
 
 class DepartmentBudget(TenantScopedModel):
+    """
+    Represents the portion of an OrganisationBudget
+    allocated to a specific department for a budget period.
 
+    Tracks the department's allocated amount along with
+    committed and actual spend for governance and reporting.
+    """
     organisation_budget = models.ForeignKey(
         "OrganisationBudget",
         on_delete=models.CASCADE,
@@ -101,3 +108,27 @@ class DepartmentBudget(TenantScopedModel):
 
     def __str__(self):
         return f"{self.department.name} - {self.organisation_budget.name}"
+
+    def clean(self):
+        # Ensure department and budget belong to the same organisation
+        if self.department.organisation != self.organisation_budget.organisation:
+            raise ValidationError(
+                "Department must belong to the same organisation as the budget."
+            )
+
+        #Calculate current allocated total for all the other departments
+        existing_allocations = (
+            DepartmentBudget.objects
+            .filter(organisation_budget=self.organisation_budget)
+            .exclude(pk=self.pk)
+            .aggregate(total=models.Sum("allocated_amount"))["total"] or 0
+        )
+
+        if existing_allocations + self.allocated_amount > self.organisation_budget.total_budget:
+            raise ValidationError(
+                "Department allocations exceed the organisation budget"
+            )
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
