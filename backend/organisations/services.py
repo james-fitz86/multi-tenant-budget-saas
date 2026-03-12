@@ -12,7 +12,7 @@ def create_organisation(user, organisation_name):
 
     with transaction.atomic():
 
-        organisation - Organisation.objects.create(
+        organisation = Organisation.objects.create(
             name=organisation_name,
             created_by=user,
         )
