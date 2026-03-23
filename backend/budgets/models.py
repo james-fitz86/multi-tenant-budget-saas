@@ -132,3 +132,84 @@ class DepartmentBudget(TenantScopedModel):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+class StatusChoices(models.TextChoices):
+    """
+    Defines the lifecycle states of a spend request
+    within the approval workflow.
+    """
+
+    PENDING = "PENDING", "Pending"
+    APPROVED = "APPROVED", "Approved"
+    REJECTED = "REJECTED", "Rejected"
+
+class SpendRequest(TenantScopedModel):
+    """
+    Represents a request to spend funds from a department's allocated budget.
+
+    Captures the requested amount, associated department budget,
+    current approval status, and review metadata.
+    """
+
+    department_budget = models.ForeignKey(
+        "DepartmentBudget",
+        on_delete=models.CASCADE,
+        related_name="spend_requests"
+    )
+
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="spend_requests_created"
+    )
+
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    description = models.CharField(max_length=255)
+
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.PENDING
+    )
+
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="spend_requests_reviewed",
+        null=True,
+        blank=True
+    )
+
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        
+        indexes = [
+            models.Index(fields=["department_budget", "status"])
+        ]
+
+    def __str__(self):
+        return f"{self.department_budget.department.name} - €{self.amount} ({self.status})"
+
+    def clean(self):
+        # Ensure department and budget belong to the same organisation
+        if self.department_budget.organisation != self.organisation:
+            raise ValidationError(
+                "Department budget must belong to the same organisation as the spend request"
+            )
+
+        # Ensure request does not exceed the department's allocated amount
+        if self.department_budget.committed_spend + self.amount > self.department_budget.allocated_amount:
+            raise ValidationError(
+                "Spend request exceeds the department's allocated budget"
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
